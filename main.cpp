@@ -1,4 +1,5 @@
 #include <ostream>
+#include <sstream>
 #include <stdexcept>
 #include <vector>
 #include <string>
@@ -11,6 +12,12 @@
 struct constraint_violated : std::runtime_error
 {
     constraint_violated(const std::string &msg = "") : std::runtime_error(msg) {}
+};
+
+
+struct bad_io : std::runtime_error
+{
+    bad_io(const std::string &msg = "") : std::runtime_error(msg) {}
 };
 
 
@@ -214,9 +221,8 @@ struct graph_impl : graph
     {
         const auto dump_out_i32 = [&os, &specs = _bus_i32_spec](size_t idx) {
             const bus_cell_spec &spec = specs.at(idx);
-            os << "(out ";
+            os << "out ";
             os << spec.node_idx << ' ' << spec.node_output_idx;
-            os << ')';
         };
         for (size_t node_idx = 0; node_idx < _nodes.size(); ++node_idx) {
             const auto &node = _nodes[node_idx];
@@ -241,47 +247,67 @@ struct graph_impl : graph
     }
     void read_dump(std::istream &is, const nodes_factory &nodes) override
     {
-        std::vector<std::tuple<size_t, size_t, size_t, size_t>> connections;
-        const auto try_read_parens = [&is, &connections](size_t node_idx, size_t in_idx) {
-            if (is.peek() != '(') 
-                return false;
-            is.ignore(); // (
-            std::string type;
-            size_t provider_idx;
-            size_t provider_output_idx;
-            EXPECT(is >> type && type == "out");
-            EXPECT(is >> provider_idx && "expected a provider node idx (ui64)");
-            EXPECT(is >> provider_output_idx && "expected a provider node output idx (ui64)");
-            is.ignore(); // )
-            connections.emplace_back(provider_idx, provider_output_idx, node_idx, in_idx);
-            return true;
+        const auto peek_str = [&is] {
+            const auto pos = is.tellg();
+            is >> std::ws;
+            std::string str;
+            is >> str;
+            is.seekg(pos);
+            return str;
         };
-
+        const auto read_str = [&is](const std::string &what = "value") {
+            is >> std::ws;
+            std::string str;
+            if (is >> str) return str;
+            throw bad_io("unexpectedly can't read " + what + " (str)");
+        };
+        const auto read_i32 = [&is](const std::string &what = "value") {
+            is >> std::ws;
+            int i32;
+            if (is >> i32) return i32;
+            is.clear();
+            std::string s; is >> s;
+            throw bad_io("expected a " + what + " (i32), but get '" + s + "'");
+        };
+        const auto read_ui64 = [&is](const std::string &what = "value") {
+            is >> std::ws;
+            int ui64;
+            if (is >> ui64) return ui64; 
+            is.clear();
+            std::string s; is >> s;
+            throw bad_io("expected a " + what + " (ui64), but get '" + s + "'");
+        };
+        std::vector<std::tuple<size_t, size_t, size_t, size_t>> connections;
+        const auto try_read_parens = [&](size_t node_idx, size_t in_idx) {
+            if (read_str() != "out") throw bad_io("expected keyword 'out'");
+            const size_t provider_idx = read_ui64("provider node idx");
+            const size_t provider_output_idx = read_ui64("provider node output idx");
+            connections.emplace_back(provider_idx, provider_output_idx, node_idx, in_idx);
+        };
         graph_impl g;
         while (is) {
-            size_t node_idx;
-            std::string node_name;
-            EXPECT(is >> node_idx && "expected a node idx (ui64)");
-            EXPECT(is >> node_name && "expected a node name (str)");
+            const size_t node_idx = read_ui64("node idx");
+            const std::string node_name = read_str("node name");
             node *n = nodes.create(node_name);
-            EXPECT(n != nullptr && "unknown node name");
+            if (n == nullptr)
+                throw bad_io("unknown node name " + node_name);
             g.set_node(node_idx, n);
 
-            const size_t ins_i32_count = _nodes[node_idx].ins_i32_count();
+            const size_t ins_i32_count = g._nodes[node_idx].ins_i32_count();
             if (ins_i32_count) {
-                std::string token;
-                is >> token;    
-                EXPECT(token == "i32");
+                const std::string token = read_str();
+                if (token != "i32") throw bad_io("expected a 'i32' (str)");
                 for (size_t i = 0; i < ins_i32_count; ++i) {
-                    if (try_read_parens(node_idx, i))
-                        continue;int i32;
-                    EXPECT(is >> i32 && "expected a value (i32)");
-                    g.i32_in(node_idx, i) = i32;
+                    if (peek_str() == "out") {
+                        try_read_parens(node_idx, i);
+                        continue;
+                    }
+                    g.i32_in(node_idx, i) = read_i32();
                 }
             }
-
-            // read other type params
         }
+        for (const auto &[pidx, poidx, ridx, riidx] : connections)
+            g.connect_nodes(pidx, poidx, ridx, riidx);
         *this = std::move(g);
     }
 };
@@ -312,6 +338,17 @@ struct summ_i32 : node
 };
 
 
+struct nodes_factory_impl : nodes_factory
+{
+    node *create(const std::string &name) const override
+    {
+        if (name == "summ_i32") return new summ_i32;
+
+        return nullptr;
+    }
+};
+
+
 // #include <raylib.h>
 
 int main()
@@ -328,30 +365,32 @@ int main()
     // }
     // CloseWindow();
 
-    std::cout << "a\n";
     graph_impl gi;
     graph &g = gi;
 
-    std::cout << "b\n";
     size_t summ_id = g.add_node(new summ_i32);
-    std::cout << summ_id << "b1\n";
     size_t summ_id2 = g.add_node(new summ_i32);
-    std::cout << summ_id2 << "b2\n";
 
-    std::cout << "c\n";
     g.i32_in(summ_id, summ_i32::a) = 42;
     g.i32_in(summ_id, summ_i32::b) = 69;
     g.connect_nodes(summ_id, summ_i32::summ, summ_id2, summ_i32::a);
 
-    std::cout << "d\n";
     g.run_node(summ_id);
     g.run_node(summ_id2);
 
     std::cout << g.i32_out(summ_id, summ_i32::summ) << '\n';
     std::cout << g.i32_out(summ_id2, summ_i32::summ) << '\n';
 
-    g.dump(std::cout);
+    std::stringstream ss;
+    g.dump(ss);
+    std::cout << ss.str();
 
+    graph_impl gi2;
+
+    const nodes_factory_impl nodes;
+    gi2.read_dump(ss, nodes);
+
+    // gi2.dump(std::cout);
     return 0;
 }
 
