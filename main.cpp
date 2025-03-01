@@ -59,6 +59,7 @@ struct graph
         }
         void add_in_i32() override
         {
+            _default_ins_i32.push_back(_g._bus_i32_next_free_cell);
             _ins_i32.push_back(_g._bus_i32_next_free_cell++);
         }
         void add_out_i32() override
@@ -93,7 +94,8 @@ struct graph
     private:
         graph &_g;
         std::unique_ptr<node> _node;
-        std::vector<size_t> _ins_i32;
+        std::vector<size_t> _default_ins_i32;
+        std::vector<size_t> _ins_i32; // may change after init to declare input connections
         std::vector<size_t> _outs_i32;
     };
 
@@ -140,8 +142,23 @@ struct graph
 };
 
 
+#include <raylib.h>
+
 int main()
 {
+    const int screenWidth = 600;
+    const int screenHeight = 400;
+    InitWindow(screenWidth, screenHeight, "Hello World Window");
+    SetTargetFPS(60);
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+        ClearBackground(RED);
+        DrawText("Hello, World!", screenWidth / 2 - MeasureText("Hello, World!", 20) / 2, screenHeight / 2 - 10, 20, BLACK);
+        EndDrawing();
+    }
+    CloseWindow();
+
     graph g;
     return 0;
 }
+

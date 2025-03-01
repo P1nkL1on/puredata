@@ -1,0 +1,15 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build link run",
+            "type": "shell",
+            "command": "g++ -std=c++17 main.cpp -o main -I/usr/local/include/ -L/use/local/lib/ -lraylib -lm -lpthread -ldl -lGL -lX11 && ./main",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
