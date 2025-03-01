@@ -219,12 +219,17 @@ struct graph_impl : graph
     }
     void dump(std::ostream &os) const override
     {
+        os << "version 1\n";
+
+        const size_t nodes_count = _nodes.size();
+        os << "nodes " << nodes_count << '\n';
+
         const auto dump_out_i32 = [&os, &specs = _bus_i32_spec](size_t idx) {
             const bus_cell_spec &spec = specs.at(idx);
             os << "out ";
             os << spec.node_idx << ' ' << spec.node_output_idx;
         };
-        for (size_t node_idx = 0; node_idx < _nodes.size(); ++node_idx) {
+        for (size_t node_idx = 0; node_idx < nodes_count; ++node_idx) {
             const auto &node = _nodes[node_idx];
             if (node.was_removed()) continue;
             os << node_idx << ' ' << node.name();
@@ -278,14 +283,22 @@ struct graph_impl : graph
             throw bad_io("expected a " + what + " (ui64), but get '" + s + "'");
         };
         std::vector<std::tuple<size_t, size_t, size_t, size_t>> connections;
-        const auto try_read_parens = [&](size_t node_idx, size_t in_idx) {
+        const auto try_read_connected = [&](size_t node_idx, size_t in_idx) {
             if (read_str() != "out") throw bad_io("expected keyword 'out'");
             const size_t provider_idx = read_ui64("provider node idx");
             const size_t provider_output_idx = read_ui64("provider node output idx");
             connections.emplace_back(provider_idx, provider_output_idx, node_idx, in_idx);
         };
         graph_impl g;
-        while (is) {
+        if (read_str("version") != "version")
+            throw bad_io("expected a 'version' tag");
+        const size_t version = read_ui64("version number");
+        if (version != 1)
+            throw bad_io("can't read projects with version other than 1. get " + std::to_string(version));
+        if (read_str("tag") != "nodes")
+            throw bad_io("expected a 'nodes' tag");
+        const size_t nodes_count = read_ui64("nodes count");
+        for (size_t i = 0; i < nodes_count; ++i) {
             const size_t node_idx = read_ui64("node idx");
             const std::string node_name = read_str("node name");
             node *n = nodes.create(node_name);
@@ -299,7 +312,7 @@ struct graph_impl : graph
                 if (token != "i32") throw bad_io("expected a 'i32' (str)");
                 for (size_t i = 0; i < ins_i32_count; ++i) {
                     if (peek_str() == "out") {
-                        try_read_parens(node_idx, i);
+                        try_read_connected(node_idx, i);
                         continue;
                     }
                     g.i32_in(node_idx, i) = read_i32();
@@ -390,7 +403,7 @@ int main()
     const nodes_factory_impl nodes;
     gi2.read_dump(ss, nodes);
 
-    // gi2.dump(std::cout);
+    gi2.dump(std::cout);
     return 0;
 }
 
