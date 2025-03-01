@@ -2,8 +2,6 @@
 
 #include "node.h"
 
-namespace {
-
 struct summ_i32 : node
 {
     enum {
@@ -35,5 +33,3 @@ struct nodes_factory_impl : nodes_factory
         return nullptr;
     }
 };
-
-}

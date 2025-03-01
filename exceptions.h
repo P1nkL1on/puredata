@@ -3,8 +3,6 @@
 #include <stdexcept>
 
 
-namespace {
-
 struct constraint_violated : std::runtime_error
 {
     constraint_violated(const std::string &msg = "") : std::runtime_error(msg) {}
@@ -18,6 +16,3 @@ struct bad_io : std::runtime_error
 {
     bad_io(const std::string &msg = "") : std::runtime_error(msg) {}
 };
-
-
-}

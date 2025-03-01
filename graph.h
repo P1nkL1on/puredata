@@ -5,8 +5,6 @@
 #include "node.h"
 
 
-namespace {
-
 struct graph
 {
     virtual ~graph() = default;
@@ -23,5 +21,3 @@ struct graph
     virtual void dump(std::ostream &os) const = 0;
     virtual void read_dump(std::istream &is, const nodes_factory &nodes) = 0;
 };    
-
-}

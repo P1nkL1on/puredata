@@ -4,8 +4,6 @@
 #include <cstddef>
 
 
-namespace {
-
 struct node_init_ctx
 {
     virtual ~node_init_ctx() = default;
@@ -36,5 +34,3 @@ struct nodes_factory
     virtual ~nodes_factory() = default;
     virtual node *create(const std::string &name) const = 0;
 };
-
-}
