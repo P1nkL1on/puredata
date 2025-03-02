@@ -1,7 +1,8 @@
 #include "graph_impl.h"
 #include "exceptions.h"
 
-graph_impl::node_inout_spec::node_inout_spec(graph_impl &g, node *node, int node_idx) : _g(&g), _node_idx(node_idx)
+graph_impl::node_inout_spec::node_inout_spec(graph_impl &g, node *node, size_t node_idx) :
+    _g(&g), _node_idx(node_idx)
 {
     _node.reset(node);
     if (_node)
@@ -22,6 +23,11 @@ graph_impl::node_inout_spec &graph_impl::node_inout_spec::operator=(node_inout_s
     _default_ins_i32 = std::move(other._default_ins_i32);
     _ins_i32 = std::move(other._ins_i32);
     _outs_i32 = std::move(other._outs_i32);
+    _default_ins_fbuffer = std::move(other._default_ins_fbuffer);
+    _ins_fbuffer = std::move(other._ins_fbuffer);
+    _outs_fbuffer = std::move(other._outs_fbuffer);
+    _default_ins_str = std::move(other._default_ins_str);
+    _ins_str = std::move(other._ins_str);
     return *this;
 }
 
@@ -51,37 +57,45 @@ void graph_impl::node_inout_spec::add_out_i32()
 
 void graph_impl::node_inout_spec::add_in_str(const std::string &str) 
 {
-
+    _g->_bus_str[_g->_bus_str_next_free_cell] = str;
+    _default_ins_str.push_back(_g->_bus_str_next_free_cell);
+    _ins_str.push_back(_g->_bus_str_next_free_cell++);
 }
 
-void graph_impl::node_inout_spec::add_in_fbuffer(size_t size, std::vector<float> &&init)
+void graph_impl::node_inout_spec::add_in_fbuffer(std::vector<float> &&init)
 {
-
+    _g->_bus_fbuffer[_g->_bus_fbuffer_next_free_cell] = std::move(init);
+    _default_ins_fbuffer.push_back(_g->_bus_fbuffer_next_free_cell);
+    _ins_fbuffer.push_back(_g->_bus_fbuffer_next_free_cell++);
 }
 
 void graph_impl::node_inout_spec::add_out_fbuffer() 
 {
-
+    _g->_bus_fbuffer_spec.emplace(_g->_bus_fbuffer_next_free_cell, bus_cell_spec{ _node_idx, _outs_fbuffer.size() });
+    _outs_fbuffer.push_back(_g->_bus_fbuffer_next_free_cell++);
 }
 
 std::vector<float> &graph_impl::node_inout_spec::fbuffer_out(size_t idx) 
 {
-
+    return _g->_bus_fbuffer[_outs_fbuffer[idx]];
 }
 
 const std::string &graph_impl::node_inout_spec::str_in(size_t idx) const 
 {
-
+    return _g->_bus_str[_ins_str[idx]];
 }
 
 const std::vector<float> &graph_impl::node_inout_spec::fbuffer_in(size_t idx) const 
 {
-
+    return _g->_bus_fbuffer[_ins_fbuffer[idx]];
 }
 
-foo_f graph_impl::node_inout_spec::parse_foo_f(const std::string &str, const size_t ins_count) 
+foo_f graph_impl::node_inout_spec::parse_foo_f(const std::string &, const size_t)
 {
-    throw bad_io("can't parse a foo");
+    // FIXME: no parsing happening
+    return foo_f([](size_t, const float *value_ptr) -> float {
+        return *value_ptr;
+    });
 }
 
 void graph_impl::node_inout_spec::run_foo(const size_t start, const size_t end, const foo_iter &foo) 
@@ -108,7 +122,17 @@ size_t graph_impl::node_inout_spec::i32_out_bus_idx(size_t idx) const
 
 size_t graph_impl::node_inout_spec::i32_in_bus_idx(size_t idx) const 
 {
-    return _ins_i32[idx]; 
+    return _ins_i32[idx];
+}
+
+size_t graph_impl::node_inout_spec::fbuffer_out_bus_idx(size_t idx) const
+{
+    return _outs_fbuffer[idx];
+}
+
+size_t graph_impl::node_inout_spec::fbuffer_in_bus_idx(size_t idx) const
+{
+    return _ins_fbuffer[idx];
 }
 
 size_t graph_impl::node_inout_spec::i32_default_in_bus_idx(size_t idx) const 
@@ -177,6 +201,16 @@ int graph_impl::i32_out(size_t node_idx, size_t node_output) const
     return _bus_i32[_nodes.at(node_idx).i32_out_bus_idx(node_output)];
 }
 
+std::vector<float> &graph_impl::fbuffer_in(size_t node_idx, size_t node_input)
+{
+    return _bus_fbuffer[_nodes.at(node_idx).fbuffer_in_bus_idx(node_input)];
+}
+
+const std::vector<float> &graph_impl::fbuffer_out(size_t node_idx, size_t node_output) const
+{
+    return _bus_fbuffer[_nodes.at(node_idx).fbuffer_out_bus_idx(node_output)];
+}
+
 void graph_impl::dump(std::ostream &os) const
 {
     os << "version 1\n";
@@ -237,7 +271,7 @@ void graph_impl::read_dump(std::istream &is, const nodes_factory &nodes)
     };
     const auto read_ui64 = [&is](const std::string &what = "value") {
         is >> std::ws;
-        int ui64;
+        size_t ui64;
         if (is >> ui64) return ui64; 
         is.clear();
         std::string s; is >> s;

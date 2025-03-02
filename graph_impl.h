@@ -12,7 +12,7 @@ struct graph_impl : graph
     struct node_inout_spec : node_init_ctx, node_run_ctx
     {
         node_inout_spec() = default;
-        node_inout_spec(graph_impl &g, node *node, int node_idx);
+        node_inout_spec(graph_impl &g, node *node, size_t node_idx);
         node_inout_spec(node_inout_spec &&other);
         node_inout_spec &operator=(node_inout_spec &&other);
         void run();
@@ -21,7 +21,7 @@ struct graph_impl : graph
         void add_in_i32(int value_default = 0) override;
         void add_out_i32() override;
         void add_in_str(const std::string &) override;
-        void add_in_fbuffer(size_t size = 0, std::vector<float> &&init = {}) override;
+        void add_in_fbuffer(std::vector<float> &&init = {}) override;
         void add_out_fbuffer() override;
         // not_run_ctx
         int i32_in(size_t idx) const override;
@@ -35,6 +35,8 @@ struct graph_impl : graph
         size_t i32_out_bus_idx(size_t idx) const;
         size_t i32_in_bus_idx(size_t idx) const;
         size_t i32_default_in_bus_idx(size_t idx) const;
+        size_t fbuffer_out_bus_idx(size_t idx) const;
+        size_t fbuffer_in_bus_idx(size_t idx) const;
         void set_i32_in_bus_idx(size_t idx, size_t bus_idx);
         bool was_removed() const;
         const std::string &name() const;
@@ -47,6 +49,11 @@ struct graph_impl : graph
         std::vector<size_t> _default_ins_i32;
         std::vector<size_t> _ins_i32; // may change after init to declare input connections
         std::vector<size_t> _outs_i32;
+        std::vector<size_t> _default_ins_fbuffer;
+        std::vector<size_t> _ins_fbuffer; // may change after init to declare input connections
+        std::vector<size_t> _outs_fbuffer;
+        std::vector<size_t> _default_ins_str;
+        std::vector<size_t> _ins_str; // may change after init to declare input connections
     };
 
     struct bus_cell_spec
@@ -60,6 +67,10 @@ struct graph_impl : graph
     std::vector<int> _bus_i32;
     std::unordered_map<size_t, bus_cell_spec> _bus_i32_spec;
     size_t _bus_i32_next_free_cell = 0;
+
+    std::vector<std::vector<float>> _bus_fbuffer;
+    std::unordered_map<size_t, bus_cell_spec> _bus_fbuffer_spec;
+    size_t _bus_fbuffer_next_free_cell = 0;
     
     std::vector<std::string> _bus_str;
     std::unordered_map<size_t, bus_cell_spec> _bus_str_spec;
@@ -68,6 +79,7 @@ struct graph_impl : graph
     explicit graph_impl()
     {
         _bus_i32.resize(2048);
+        _bus_fbuffer.resize(2048);
         _bus_str.resize(2048);
     }
     size_t add_node(node *n) override;
@@ -80,6 +92,8 @@ struct graph_impl : graph
         size_t node_reciever_input) override;
     int &i32_in(size_t node_idx, size_t node_input) override;
     int i32_out(size_t node_idx, size_t node_output) const override;
+    std::vector<float> &fbuffer_in(size_t node_idx, size_t node_input) override;
+    const std::vector<float> &fbuffer_out(size_t node_idx, size_t node_output) const override;
     void dump(std::ostream &os) const override;
     void read_dump(std::istream &is, const nodes_factory &nodes) override;
 };

@@ -12,7 +12,7 @@ struct node_init_ctx
     virtual void add_in_i32(int value_default = 0) = 0;
     virtual void add_out_i32() = 0;
     virtual void add_in_str(const std::string &) = 0;
-    virtual void add_in_fbuffer(size_t size = 0, std::vector<float> &&init = {}) = 0;
+    virtual void add_in_fbuffer(std::vector<float> &&init = {}) = 0;
     virtual void add_out_fbuffer() = 0;
     virtual void set_name(const std::string &) = 0;
 };

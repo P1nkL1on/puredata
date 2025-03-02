@@ -26,10 +26,13 @@ struct summ_i32 : node
 
 struct map_f : node
 {
-    enum {
-        expr, buffer_in,
+    enum in_str {
+        expr,
     };
-    enum {
+    enum in_fbuffer {
+        buffer_in,
+    };
+    enum out_fbuffer {
         buffer_out,
     };
     void init(node_init_ctx &ctx) override

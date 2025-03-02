@@ -13,6 +13,8 @@ struct graph
     virtual void run_node(size_t node_idx) = 0;
     virtual int &i32_in(size_t node_idx, size_t node_input) = 0;
     virtual int i32_out(size_t node_idx, size_t node_output) const = 0;
+    virtual std::vector<float> &fbuffer_in(size_t node_idx, size_t node_input) = 0;
+    virtual const std::vector<float> &fbuffer_out(size_t node_idx, size_t node_output) const = 0;
     virtual void connect_nodes(
         size_t node_provider_idx,
         size_t node_provider_output,

@@ -45,6 +45,22 @@ void test_graph_run_dump_read()
 }
 
 
+void test_graph_run_buffer_map()
+{
+    graph_impl gi;
+    graph &g = gi;
+
+    size_t map_id = g.add_node(new map_f);
+    g.fbuffer_in(map_id, map_f::buffer_in) = std::vector<float>{ 1, 2, 3, 4, 5 };
+    g.run_node(map_id);
+
+    const auto &result = g.fbuffer_out(map_id, map_f::buffer_out);
+    std::cout << "size=" << result.size();
+    for (const float &v : result) std::cout << ' ' << v;
+    std::cout << '\n';
+}
+
+
 // #include <raylib.h>
 
 int main()
@@ -62,6 +78,7 @@ int main()
     // CloseWindow();
 
     test_graph_run_dump_read();
+    test_graph_run_buffer_map();
     return 0;
 }
 
