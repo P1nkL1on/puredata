@@ -1,4 +1,5 @@
 #include "graph_impl.h"
+#include "exceptions.h"
 
 graph_impl::node_inout_spec::node_inout_spec(graph_impl &g, node *node, int node_idx) : _g(&g), _node_idx(node_idx)
 {
@@ -48,6 +49,48 @@ void graph_impl::node_inout_spec::add_out_i32()
     _outs_i32.push_back(_g->_bus_i32_next_free_cell++);
 }
 
+void graph_impl::node_inout_spec::add_in_str(const std::string &str) 
+{
+
+}
+
+void graph_impl::node_inout_spec::add_in_fbuffer(size_t size, std::vector<float> &&init)
+{
+
+}
+
+void graph_impl::node_inout_spec::add_out_fbuffer() 
+{
+
+}
+
+std::vector<float> &graph_impl::node_inout_spec::fbuffer_out(size_t idx) 
+{
+
+}
+
+const std::string &graph_impl::node_inout_spec::str_in(size_t idx) const 
+{
+
+}
+
+const std::vector<float> &graph_impl::node_inout_spec::fbuffer_in(size_t idx) const 
+{
+
+}
+
+foo_f graph_impl::node_inout_spec::parse_foo_f(const std::string &str, const size_t ins_count) 
+{
+    throw bad_io("can't parse a foo");
+}
+
+void graph_impl::node_inout_spec::run_foo(const size_t start, const size_t end, const foo_iter &foo) 
+{
+    // TODO: add parallel stuff
+    for (size_t idx = start; idx != end; ++idx)
+        foo(idx);
+}
+
 int graph_impl::node_inout_spec::i32_in(size_t idx) const
 {
     return _g->_bus_i32[_ins_i32[idx]];
@@ -91,11 +134,6 @@ const std::string &graph_impl::node_inout_spec::name() const
 size_t graph_impl::node_inout_spec::ins_i32_count() const
 {
     return _ins_i32.size();
-}
-
-graph_impl::graph_impl()
-{
-    _bus_i32.resize(2048);
 }
 
 size_t graph_impl::add_node(node *n)
