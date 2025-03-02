@@ -52,6 +52,8 @@ struct node_run_ctx
     virtual std::vector<float> &fbuffer_out(size_t idx) = 0;
     virtual foo_f parse_foo_f(const std::string &str, size_t &foo_input_count) = 0;
     virtual void run_foo(const size_t start, const size_t end, const foo_iter &foo) = 0;
+    virtual void warning(const std::string &msg) = 0;
+    virtual void canvas_f(size_t w, size_t h, size_t size, const float *d) = 0;
 };
 
 

@@ -54,7 +54,8 @@ void test_graph_run_buffer_map()
     graph &g = gi;
 
     size_t map_id = g.add_node(new map_f);
-    g.fbuffer_in(map_id, map_f::buffer_in) = std::vector<float>{ 0.1f, 0.2f, 0.3f, 0.4f, 0.5f };
+    g.fbuffer_in(map_id, map_f::buffer_in) =
+            std::vector<float>{ 0.1f, 0.2f, 0.3f, 0.4f, 0.5f };
     g.run_node(map_id);
     g.dump_graph(std::cout);
 
@@ -78,6 +79,24 @@ void test_parse_expr()
 }
 
 
+void test_graph_buffer_canvas()
+{
+    graph_impl gi;
+    graph &g = gi;
+
+    size_t canvas_id = g.add_node(new canvas_f);
+    g.i32_in(canvas_id, canvas_f::width) = 6;
+    g.i32_in(canvas_id, canvas_f::height) = 5;
+    g.fbuffer_in(canvas_id, canvas_f::buffer_in) = std::vector<float>{
+            0, 0, 0, 1, 1, 0,
+            0, 0, 1, 0, 1, 0,
+            0, 1, 1, 1, 1, 0,
+            0, 0, 0, 0, 1, 0,
+            0, 0, 0, 0, 1, 0, };
+    g.run_node(canvas_id);
+}
+
+
 // #include <raylib.h>
 
 int main()
@@ -97,6 +116,7 @@ int main()
     test_graph_run_dump_read();
     test_graph_run_buffer_map();
     test_parse_expr();
+    test_graph_buffer_canvas();
     return 0;
 }
 
