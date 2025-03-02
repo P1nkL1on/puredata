@@ -65,16 +65,16 @@ void test_graph_run_buffer_map()
 }
 
 
-void test_expr()
+void test_parse_expr()
 {
-    expr::parse("2 + 2");
-    expr::parse("2 + (2)");
-    expr::parse("2 + (3 - 2)");
-    expr::parse("2 + (3 - a)");
-    expr::parse("2 * (A - a)");
-    expr::parse("2 * A - a");
-    expr::parse("2 - A * a");
-    expr::parse("foo(2 , A , a)");
+    expr("2 + 2");
+    expr("2 + (2)");
+    expr("2 + (3 - 2)");
+    expr("2 + (3 - a)");
+    expr("2 * (A - a)");
+    expr("2 * A - a");
+    expr("2 - A * a");
+    expr("foo(2 , A , a)");
 }
 
 
@@ -96,7 +96,7 @@ int main()
 
     test_graph_run_dump_read();
     test_graph_run_buffer_map();
-    test_expr();
+    test_parse_expr();
     return 0;
 }
 

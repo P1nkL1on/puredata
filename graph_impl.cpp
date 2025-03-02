@@ -1,5 +1,7 @@
 #include "graph_impl.h"
 #include "exceptions.h"
+#include "expr.h"
+
 
 graph_impl::node_inout_spec::node_inout_spec(graph_impl &g, node *node, size_t node_idx) :
     _g(&g), _node_idx(node_idx)
@@ -35,12 +37,12 @@ void graph_impl::node_inout_spec::set_name(const std::string &name)
     _name = name;
 }
 
-foo_f graph_impl::node_inout_spec::parse_foo_f(const std::string &, size_t &foo_input_count)
+foo_f graph_impl::node_inout_spec::parse_foo_f(const std::string &expr_string, size_t &foo_input_count)
 {
-    // FIXME: no parsing happening
+    std::shared_ptr<expr> foo(new expr(expr_string));
     foo_input_count = 1;
-    return foo_f([](size_t, const float *value_ptr) -> float {
-        return *value_ptr;
+    return foo_f([foo](size_t count, const float *value_ptr) -> float {
+        return foo->eval({ count, value_ptr });
     });
 }
 

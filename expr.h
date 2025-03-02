@@ -27,39 +27,31 @@ struct params
 };
 
 
-struct ast
+struct expr
 {
-    enum {
+    explicit expr(const std::string &expr_string);
+    float eval(const params &) const;
+    void dump(std::ostream &os) const;
+private:
+    enum type {
         unknown,
         op,
         f,
         foo,
         var,
-    } type = unknown;
-    std::string text;
-    std::vector<std::unique_ptr<ast>> _children;
-
-    float eval(const params &) const;
-    void dump(std::ostream &os) const;
-
-    static std::unique_ptr<ast> make_f(
-            const std::string &text);
-    static std::unique_ptr<ast> make_var(
-            const std::string &text);
-    static std::unique_ptr<ast> make_foo(
-            const std::string &text, std::vector<std::unique_ptr<ast>> &&args);
-    static std::unique_ptr<ast> make_op(
-            const std::string &text, std::unique_ptr<ast> &&left, std::unique_ptr<ast> &&right);
-};
-
-
-struct expr
-{
-    static expr parse(const std::string &);
-    float eval(const params &) const;
-private:
-    static std::unique_ptr<ast> parse_expression(std::istream &is);
-    static std::unique_ptr<ast> parse_term(std::istream &is);
-    static std::unique_ptr<ast> parse_factor(std::istream &is);
-    std::unique_ptr<ast> _ast;
+    } _type = unknown;
+    std::string _text;
+    std::vector<std::unique_ptr<expr>> _children;
+    expr(type, const std::string &, std::vector<std::unique_ptr<expr>>);
+    static std::unique_ptr<expr> make_f(
+            const std::string &_text);
+    static std::unique_ptr<expr> make_var(
+            const std::string &_text);
+    static std::unique_ptr<expr> make_foo(
+            const std::string &_text, std::vector<std::unique_ptr<expr>> &&args);
+    static std::unique_ptr<expr> make_op(
+            const std::string &_text, std::unique_ptr<expr> &&left, std::unique_ptr<expr> &&right);
+    static std::unique_ptr<expr> parse_expression(std::istream &is);
+    static std::unique_ptr<expr> parse_term(std::istream &is);
+    static std::unique_ptr<expr> parse_factor(std::istream &is);
 };

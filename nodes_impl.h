@@ -33,7 +33,7 @@ struct map_f : node
     void init(node_init_ctx &ctx) override
     {
         ctx.set_name("map-f");
-        ctx.add_in_str("x * 2");
+        ctx.add_in_str("a * 1 + 0");
         ctx.add_in_fbuffer();
         ctx.add_out_fbuffer();
     }
@@ -48,7 +48,7 @@ struct map_f : node
 
         out.resize(in.size());
         ctx.run_foo(0, in.size(), [&in, &out, foo](size_t i) { 
-            out[i] = foo(1, &in[i]) * 2;
+            out[i] = foo(1, &in[i]);
         });
     }
 };

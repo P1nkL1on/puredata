@@ -1,22 +1,16 @@
 #include "expr.h"
 
-#include <iostream>
 #include <sstream>
 
 
-expr expr::parse(const std::string &str)
+expr::expr(const std::string &expr_str)
 {
-    std::stringstream ss(str);
+    std::stringstream ss(expr_str);
     std::istream &is = ss;
-    std::unique_ptr<ast> ast = parse_expression(is);
-    std::cout << "expr: ";
-    ast->dump(std::cout);
-    std::cout << '\n';
-    //    return parse_expression(is);
-    return expr{};
+    *this = std::move(*parse_expression(is).release());
 }
 
-std::unique_ptr<ast> expr::parse_expression(std::istream &is)
+std::unique_ptr<expr> expr::parse_expression(std::istream &is)
 {
     auto node = parse_term(is);
     while (true) {
@@ -28,12 +22,12 @@ std::unique_ptr<ast> expr::parse_expression(std::istream &is)
             break;
         }
         auto right = parse_term(is);
-        node = ast::make_op(std::string(1, op), std::move(node), std::move(right));
+        node = expr::make_op(std::string(1, op), std::move(node), std::move(right));
     }
     return node;
 }
 
-std::unique_ptr<ast> expr::parse_term(std::istream &is)
+std::unique_ptr<expr> expr::parse_term(std::istream &is)
 {
     auto node = parse_factor(is);
     while (true) {
@@ -45,30 +39,28 @@ std::unique_ptr<ast> expr::parse_term(std::istream &is)
             break;
         }
         auto right = parse_term(is);
-        node = ast::make_op(std::string(1, op), std::move(node), std::move(right));
+        node = expr::make_op(std::string(1, op), std::move(node), std::move(right));
     }
     return node;
 }
 
-std::unique_ptr<ast> expr::parse_factor(std::istream &is)
+std::unique_ptr<expr> expr::parse_factor(std::istream &is)
 {
     char ch;
     if (!(is >> ch))
         throw err_parse("unexpected eof");
-
     if (ch == '(') {
         auto node = parse_expression(is);
         if (!(is >> ch) || ch != ')')
             throw err_parse("expected ')'");
         return node;
     }
-
     if (std::isalpha(ch)) {
         std::string name(1, ch);
         while (is.get(ch) && std::isalnum(ch))
             name += ch;
         if (ch == '(') {
-            std::vector<std::unique_ptr<ast>> args;
+            std::vector<std::unique_ptr<expr>> args;
             if (is.peek() != ')') {
                 while (true) {
                     args.emplace_back(parse_expression(is));
@@ -80,10 +72,10 @@ std::unique_ptr<ast> expr::parse_factor(std::istream &is)
             } else {
                 is.get(ch);
             }
-            return ast::make_foo(name, std::move(args));
+            return expr::make_foo(name, std::move(args));
         }
         is.putback(ch);
-        return ast::make_var(name);
+        return expr::make_var(name);
     }
 
     if (std::isdigit(ch) || ch == '.') {
@@ -91,56 +83,63 @@ std::unique_ptr<ast> expr::parse_factor(std::istream &is)
         while (is.get(ch) && (std::isdigit(ch) || ch == '.'))
             number += ch;
         is.putback(ch);
-        return ast::make_f(number);
+        return expr::make_f(number);
     }
     throw err_parse(std::string("unexpected char '") + ch + "'");
 }
 
-float ast::eval(const params &in) const
+float expr::eval(const params &in) const
 {
-    if (text == "+")
-        return _children.at(0)->eval(in) + _children.at(1)->eval(in);
-    if (text == "-")
-        return _children.at(0)->eval(in) - _children.at(1)->eval(in);
-    if (text == "/")
-        return _children.at(0)->eval(in) / _children.at(1)->eval(in);
-    if (text == "*")
-        return _children.at(0)->eval(in) * _children.at(1)->eval(in);
-
-//    if (text.size() == 1 && std::isalpha(text[0])) {
-//        char idx;
-//        if (std::islower(text[0]))
-//            idx = text[0] - 'a';
-//        else if (std::isupper(text[0]))
-//            idx = text[0] - 'A' + 27;
-//        else
-//            throw err_eval("unexpected variable name");
-//        const auto var_idx = static_cast<size_t>(idx);
-//        if (var_idx >= in.count)
-//            throw -1;
-//        return in.data[var_idx];
-//    }
-//    return std::stof(text);
-    return 0;
+    switch (_type) {
+        case op:
+            if (_text == "+")
+                return _children.at(0)->eval(in) + _children.at(1)->eval(in);
+            if (_text == "-")
+                return _children.at(0)->eval(in) - _children.at(1)->eval(in);
+            if (_text == "/")
+                return _children.at(0)->eval(in) / _children.at(1)->eval(in);
+            if (_text == "*")
+                return _children.at(0)->eval(in) * _children.at(1)->eval(in);
+            throw err_eval("unknown op type");
+        case f:
+            return std::stof(_text);
+        case foo:
+            throw err_eval("yet can't eval functions");
+        case var: {
+            char idx;
+            if (std::islower(_text[0]))
+                idx = _text[0] - 'a';
+            else if (std::isupper(_text[0]))
+                idx = _text[0] - 'A' + 27;
+            else
+                throw err_eval("unexpected variable name");
+            const auto var_idx = static_cast<size_t>(idx);
+            if (var_idx >= in.count)
+                throw err_eval("unexpected variable index");
+            return in.data[var_idx];
+        }
+        default:
+            throw err_eval("unknown ast node type");
+    }
 }
 
-void ast::dump(std::ostream &os) const
+void expr::dump(std::ostream &os) const
 {
-    switch (type) {
+    switch (_type) {
         case op:
             os << '(';
             _children.at(0)->dump(os);
             os << ' ';
-            os << text;
+            os << _text;
             os << ' ';
             _children.at(1)->dump(os);
             os << ')';
             return;
         case f:
-            os << text;
+            os << _text;
             return;
         case foo: {
-            os << text;
+            os << _text;
             os << '(';
             bool need_comma = false;
             for (const auto &child : _children) {
@@ -152,38 +151,41 @@ void ast::dump(std::ostream &os) const
             return;
         }
         case var:
-            os << '$' << text;
+            os << '$' << _text;
             return;
         default:
             throw err_eval("unknown ast node type");
     }
 }
 
-std::unique_ptr<ast> ast::make_f(const std::string &text)
+expr::expr(type t, const std::string &s, std::vector<std::unique_ptr<expr>> args) :
+    _type(t), _text(s), _children(std::move(args)) {}
+
+std::unique_ptr<expr> expr::make_f(const std::string &text)
 {
-    return std::unique_ptr<ast>(
-                new ast{ f, text, {} });
+    return std::unique_ptr<expr>(
+                new expr{ f, text, {} });
 }
 
-std::unique_ptr<ast> ast::make_var(const std::string &text)
+std::unique_ptr<expr> expr::make_var(const std::string &text)
 {
-    return std::unique_ptr<ast>(
-                new ast{ var, text, {} });
+    return std::unique_ptr<expr>(
+                new expr{ var, text, {} });
 }
 
-std::unique_ptr<ast> ast::make_foo(
-        const std::string &text, std::vector<std::unique_ptr<ast> > &&args)
+std::unique_ptr<expr> expr::make_foo(
+        const std::string &text, std::vector<std::unique_ptr<expr> > &&args)
 {
-    return std::unique_ptr<ast>(
-                new ast{ foo, text, std::move(args) });
+    return std::unique_ptr<expr>(
+                new expr{ foo, text, std::move(args) });
 }
 
-std::unique_ptr<ast> ast::make_op(
-        const std::string &text, std::unique_ptr<ast> &&left, std::unique_ptr<ast> &&right)
+std::unique_ptr<expr> expr::make_op(
+        const std::string &text, std::unique_ptr<expr> &&left, std::unique_ptr<expr> &&right)
 {
-    std::vector<std::unique_ptr<ast>> children;
+    std::vector<std::unique_ptr<expr>> children;
     children.emplace_back(std::move(left));
     children.emplace_back(std::move(right));
-    return std::unique_ptr<ast>(
-                new ast{ op, text, std::move(children) });
+    return std::unique_ptr<expr>(
+                new expr{ op, text, std::move(children) });
 }
