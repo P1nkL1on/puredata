@@ -35,9 +35,10 @@ void graph_impl::node_inout_spec::set_name(const std::string &name)
     _name = name;
 }
 
-foo_f graph_impl::node_inout_spec::parse_foo_f(const std::string &, const size_t)
+foo_f graph_impl::node_inout_spec::parse_foo_f(const std::string &, size_t &foo_input_count)
 {
     // FIXME: no parsing happening
+    foo_input_count = 1;
     return foo_f([](size_t, const float *value_ptr) -> float {
         return *value_ptr;
     });
@@ -85,36 +86,38 @@ void graph_impl::connect_nodes(
 
 void graph_impl::dump(std::ostream &os) const
 {
-//    os << "version 1\n";
+    os << "version 1\n";
 
-//    const size_t nodes_count = _nodes.size();
-//    os << "nodes " << nodes_count << '\n';
+    const size_t nodes_count = _nodes.size();
+    os << "nodes " << nodes_count << '\n';
 
-//    const auto dump_out_i32 = [&os, &specs = _bus_i32_spec](size_t idx) {
-//        const bus_cell_spec &spec = specs.at(idx);
-//        os << "out ";
-//        os << spec.node_idx << ' ' << spec.node_output_idx;
-//    };
-//    for (size_t node_idx = 0; node_idx < nodes_count; ++node_idx) {
-//        const auto &node = _nodes[node_idx];
-//        if (node.was_removed()) continue;
-//        os << node_idx << ' ' << node.name();
+    for (size_t node_idx = 0; node_idx < nodes_count; ++node_idx) {
+        const auto &node = _nodes[node_idx];
+        if (node.was_removed()) continue;
+        os << node_idx << ' ' << node.name();
 
-//        const size_t ins_i32_count = node.ins_i32_count();
-//        if (ins_i32_count)
-//            os << " i32";
-//        for (size_t in_idx = 0; in_idx < ins_i32_count; ++in_idx) {
-//            os << ' ';
-//            const size_t bus_idx = node.i32_in_bus_idx(in_idx);
-//            const size_t default_bus_idx = node.i32_default_in_bus_idx(in_idx);
-//            if (bus_idx == default_bus_idx)
-//                os << _bus_i32.at(bus_idx);
-//            else
-//                dump_out_i32(bus_idx);
-//        }
+        for (size_t i = static_cast<size_t>(data_type::_first);
+             i != static_cast<size_t>(data_type::_last); ++i) {
 
-//        os << '\n';
-//    }
+            const auto type = data_type(i);
+            const size_t count = node.ins_count(type);
+            if (!count) continue;
+
+            os << ' ' << data_type_titles.at(i);
+            for (size_t in_idx = 0; in_idx < count; ++in_idx) {
+                os << ' ';
+                const size_t bus_idx = node.in_bus_idx(type, in_idx);
+                const size_t default_bus_idx = node.default_in_bus_idx(type, in_idx);
+                if (bus_idx == default_bus_idx) {
+                    os << _bus_i32.at(bus_idx);
+                    continue;
+                }
+                const bus_cell_spec &spec = _bus.at(type)._bus_spec.at(bus_idx);
+                os << "out-" << spec.node_idx << '-' << spec.node_output_idx;
+            }
+        }
+        os << '\n';
+    }
 }
 
 void graph_impl::read_dump(std::istream &is, const nodes_factory &nodes)

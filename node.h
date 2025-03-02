@@ -23,6 +23,16 @@ enum class data_type
     i32,
     str,
     fbuffer,
+
+    _last,
+    _first = i32,
+};
+
+
+constexpr std::array<const char *, static_cast<size_t>(data_type::_last)> data_type_titles = {
+    "i32",
+    "str",
+    "fbuffer",
 };
 
 
@@ -40,7 +50,7 @@ struct node_run_ctx
     virtual const std::string &str_in(size_t idx) const = 0;
     virtual const std::vector<float> &fbuffer_in(size_t idx) const = 0;
     virtual std::vector<float> &fbuffer_out(size_t idx) = 0;
-    virtual foo_f parse_foo_f(const std::string &str, const size_t ins_count = 1) = 0;
+    virtual foo_f parse_foo_f(const std::string &str, size_t &foo_input_count) = 0;
     virtual void run_foo(const size_t start, const size_t end, const foo_iter &foo) = 0;
 };
 

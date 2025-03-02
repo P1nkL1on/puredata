@@ -17,7 +17,6 @@ template <data_type T> using bus_underlying_vector_type = std::vector<bus_underl
 
 struct graph_impl : graph
 {
-
     struct node_inout_spec : node_init_ctx, node_run_ctx
     {
         node_inout_spec() = default;
@@ -45,7 +44,7 @@ struct graph_impl : graph
             return add_in_X<data_type::str>(std::move(value)); }
 
         // not_run_ctx
-        foo_f parse_foo_f(const std::string &str, const size_t ins_count = 1) override;
+        foo_f parse_foo_f(const std::string &str, size_t &foo_input_count) override;
         void run_foo(const size_t start, const size_t end, const foo_iter &foo) override;
 
         const int &i32_in(size_t idx) const override {
@@ -73,22 +72,19 @@ struct graph_impl : graph
         void set_in_bus_idx(data_type type, size_t idx, size_t bus_idx) {
             _bus[type]._ins[idx] = bus_idx; }
 
-    private:
-        graph_impl *_g = nullptr;
-        std::unique_ptr<node> _node;
-        size_t _node_idx;
-        std::string _name;
         struct bus
         {
             std::vector<size_t> _default_ins;
             std::vector<size_t> _ins; // may change after init to declare input connections
             std::vector<size_t> _outs;
         };
-        std::unordered_map<data_type, bus> _bus = {
-            { data_type::i32, bus{} },
-            { data_type::str, bus{} },
-            { data_type::fbuffer, bus{} },
-        };
+        static std::unordered_map<data_type, bus> init_bus();
+    private:
+        graph_impl *_g = nullptr;
+        std::unique_ptr<node> _node;
+        size_t _node_idx;
+        std::string _name;
+        std::unordered_map<data_type, bus> _bus = init_bus();
         template <data_type T, typename X> void add_in_X(X &&x);
         template <data_type T> void add_out_X();
         template <data_type T> const bus_underlying_type<T> &in_X(size_t idx) const;
@@ -105,16 +101,13 @@ struct graph_impl : graph
         std::unordered_map<size_t, bus_cell_spec> _bus_spec;
         size_t _bus_next_free_cell = 0;
     };
+    static std::unordered_map<data_type, bus> init_bus();
 
     std::vector<node_inout_spec> _nodes;
     std::vector<int> _bus_i32;
     std::vector<std::vector<float>> _bus_fbuffer;
     std::vector<std::string> _bus_str;
-    std::unordered_map<data_type, bus> _bus = {
-        { data_type::i32, bus{} },
-        { data_type::str, bus{} },
-        { data_type::fbuffer, bus{} },
-    };
+    std::unordered_map<data_type, bus> _bus = init_bus();
     template <data_type T> bus_underlying_vector_type<T> &bus_X_ref();
     template <data_type T> const bus_underlying_vector_type<T> &bus_X_cref() const;
     template <data_type T> bus_underlying_type<T> &in_X(size_t idx, size_t node_input);
@@ -163,24 +156,6 @@ struct graph_impl : graph
 // impl
 
 
-template <data_type T> bus_underlying_vector_type<T> &graph_impl::bus_X_ref()
-{
-    if constexpr (T == data_type::i32) { return _bus_i32;
-    } else if constexpr (T == data_type::str) { return _bus_str;
-    } else if constexpr (T == data_type::fbuffer) { return _bus_fbuffer;
-    }
-}
-
-
-template <data_type T> const bus_underlying_vector_type<T> &graph_impl::bus_X_cref() const
-{
-    if constexpr (T == data_type::i32) { return _bus_i32;
-    } else if constexpr (T == data_type::str) { return _bus_str;
-    } else if constexpr (T == data_type::fbuffer) { return _bus_fbuffer;
-    }
-}
-
-
 template <data_type T, typename X>
 void graph_impl::node_inout_spec::add_in_X(X &&x)
 {
@@ -227,3 +202,45 @@ const bus_underlying_type<T> &graph_impl::out_X(size_t idx, size_t node_output) 
     return bus_X_cref<T>().at(_nodes.at(idx).out_bus_idx(T, node_output));
 }
 
+
+// listing all types
+
+
+template <data_type T> bus_underlying_vector_type<T> &graph_impl::bus_X_ref()
+{
+    if constexpr (T == data_type::i32) { return _bus_i32;
+    } else if constexpr (T == data_type::str) { return _bus_str;
+    } else if constexpr (T == data_type::fbuffer) { return _bus_fbuffer;
+    }
+}
+
+
+template <data_type T> const bus_underlying_vector_type<T> &graph_impl::bus_X_cref() const
+{
+    if constexpr (T == data_type::i32) { return _bus_i32;
+    } else if constexpr (T == data_type::str) { return _bus_str;
+    } else if constexpr (T == data_type::fbuffer) { return _bus_fbuffer;
+    }
+}
+
+
+inline std::unordered_map<data_type, graph_impl::node_inout_spec::bus>
+graph_impl::node_inout_spec::init_bus()
+{
+    return {
+        { data_type::i32, {}},
+        { data_type::str, {}},
+        { data_type::fbuffer, {}},
+    };
+}
+
+
+inline std::unordered_map<data_type, graph_impl::bus>
+graph_impl::init_bus()
+{
+    return {
+        { data_type::i32, {}},
+        { data_type::str, {}},
+        { data_type::fbuffer, {}},
+    };
+}
