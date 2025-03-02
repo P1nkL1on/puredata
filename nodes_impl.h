@@ -26,15 +26,10 @@ struct summ_i32 : node
 
 struct map_f : node
 {
-    enum in_str {
-        expr,
-    };
-    enum in_fbuffer {
-        buffer_in,
-    };
-    enum out_fbuffer {
-        buffer_out,
-    };
+    enum in_str { expr, };
+    enum in_fbuffer { buffer_in, };
+    enum out_fbuffer { buffer_out, };
+
     void init(node_init_ctx &ctx) override
     {
         ctx.set_name("map_f");
@@ -44,14 +39,14 @@ struct map_f : node
     }
     void run(node_run_ctx &ctx) override
     {
-        foo_f foo = ctx.parse_foo_f(ctx.str_in(expr), 1);
         const std::vector<float> &in = ctx.fbuffer_in(buffer_in);
         
         std::vector<float> &out = ctx.fbuffer_out(buffer_out);
-        out.resize(in.size());
 
+        foo_f foo = ctx.parse_foo_f(ctx.str_in(expr), 1);
+        out.resize(in.size());
         ctx.run_foo(0, in.size(), [&in, &out, foo](size_t i) { 
-            out[i] = foo(1, &in[i]); 
+            out[i] = foo(1, &in[i]) * 2;
         });
     }
 };

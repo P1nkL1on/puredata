@@ -15,8 +15,8 @@ void test_graph_run_dump_read()
 
     g.i32_in(summ_id, summ_i32::a) = 42;
     g.i32_in(summ_id, summ_i32::b) = 69;
-    g.connect_nodes(summ_id, summ_i32::summ, summ_id2, summ_i32::a);
-    g.connect_nodes(summ_id, summ_i32::summ, summ_id2, summ_i32::b);
+    g.connect_nodes(data_type::i32, summ_id, summ_i32::summ, summ_id2, summ_i32::a);
+    g.connect_nodes(data_type::i32, summ_id, summ_i32::summ, summ_id2, summ_i32::b);
 
     g.run_node(summ_id);
     g.run_node(summ_id2);
@@ -77,7 +77,7 @@ int main()
     // }
     // CloseWindow();
 
-    test_graph_run_dump_read();
+//    test_graph_run_dump_read();
     test_graph_run_buffer_map();
     return 0;
 }

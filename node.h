@@ -9,12 +9,20 @@
 struct node_init_ctx
 {
     virtual ~node_init_ctx() = default;
-    virtual void add_in_i32(int value_default = 0) = 0;
+    virtual void add_in_i32(int &&value_default = 0) = 0;
     virtual void add_out_i32() = 0;
-    virtual void add_in_str(const std::string &) = 0;
+    virtual void add_in_str(std::string &&) = 0;
     virtual void add_in_fbuffer(std::vector<float> &&init = {}) = 0;
     virtual void add_out_fbuffer() = 0;
     virtual void set_name(const std::string &) = 0;
+};
+
+
+enum class data_type
+{
+    i32,
+    str,
+    fbuffer,
 };
 
 
@@ -27,7 +35,7 @@ using foo_iter = std::function<void(size_t)>;
 struct node_run_ctx
 {
     virtual ~node_run_ctx() = default;
-    virtual int i32_in(size_t idx) const = 0;
+    virtual const int &i32_in(size_t idx) const = 0;
     virtual int &i32_out(size_t idx) = 0;
     virtual const std::string &str_in(size_t idx) const = 0;
     virtual const std::vector<float> &fbuffer_in(size_t idx) const = 0;
