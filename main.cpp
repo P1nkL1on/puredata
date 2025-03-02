@@ -3,6 +3,7 @@
 #include "exceptions.h"
 #include "nodes_impl.h"
 #include "graph_impl.h"
+#include "expr.h"
 
 
 void test_graph_run_dump_read()
@@ -31,7 +32,7 @@ void test_graph_run_dump_read()
             "1 summ-i32 i32 out-0-0 out-0-0\n";
 
     std::stringstream ss;
-    g.dump(ss);
+    g.dump_graph(ss);
     std::cout << ss.str();
     EXPECT(ss.str() == expected_dump);
 
@@ -41,7 +42,7 @@ void test_graph_run_dump_read()
     gi2.read_dump(ss, nodes);
 
     std::stringstream ss2;
-    gi2.dump(ss2);
+    gi2.dump_graph(ss2);
     return;
     EXPECT(ss2.str() == expected_dump);
 }
@@ -53,13 +54,27 @@ void test_graph_run_buffer_map()
     graph &g = gi;
 
     size_t map_id = g.add_node(new map_f);
-    g.fbuffer_in(map_id, map_f::buffer_in) = std::vector<float>{ 1, 2, 3, 4, 5 };
+    g.fbuffer_in(map_id, map_f::buffer_in) = std::vector<float>{ 0.1f, 0.2f, 0.3f, 0.4f, 0.5f };
     g.run_node(map_id);
+    g.dump_graph(std::cout);
 
     const auto &result = g.fbuffer_out(map_id, map_f::buffer_out);
     std::cout << "size=" << result.size();
     for (const float &v : result) std::cout << ' ' << v;
     std::cout << '\n';
+}
+
+
+void test_expr()
+{
+    expr::parse("2 + 2");
+    expr::parse("2 + (2)");
+    expr::parse("2 + (3 - 2)");
+    expr::parse("2 + (3 - a)");
+    expr::parse("2 * (A - a)");
+    expr::parse("2 * A - a");
+    expr::parse("2 - A * a");
+    expr::parse("foo(2 , A , a)");
 }
 
 
@@ -81,6 +96,7 @@ int main()
 
     test_graph_run_dump_read();
     test_graph_run_buffer_map();
+    test_expr();
     return 0;
 }
 

@@ -21,6 +21,7 @@ struct graph
             size_t node_provider_output,
             size_t node_reciever_idx,
             size_t node_reciever_input) = 0;
-    virtual void dump(std::ostream &os) const = 0;
+    virtual void dump_node_in(std::ostream &os, size_t node_idx, data_type, size_t input) const = 0;
+    virtual void dump_graph(std::ostream &os) const = 0;
     virtual void read_dump(std::istream &is, const nodes_factory &nodes) = 0;
 };    

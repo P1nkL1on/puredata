@@ -84,7 +84,30 @@ void graph_impl::connect_nodes(
                 _nodes.at(node_provider_idx).out_bus_idx(type, node_provider_output));
 }
 
-void graph_impl::dump(std::ostream &os) const
+void graph_impl::dump_node_in(
+        std::ostream &os, size_t node_idx, data_type type, size_t node_input) const
+{
+    const size_t bus_offset = _nodes.at(node_idx).in_bus_idx(type, node_input);
+    switch (type) {
+        case data_type::i32:
+            os << _bus_i32.at(bus_offset);
+            return;
+        case data_type::fbuffer: {
+            const std::vector<float> &buffer = _bus_fbuffer.at(bus_offset);
+            os << buffer.size();
+            for (const float &v : buffer) os << ' ' << v;
+            return;
+        }
+        case data_type::str:
+            os << '"' << _bus_str.at(bus_offset) << '"';
+            return;
+        default:
+            break;
+    }
+    EXPECT(false && "unreachable");
+}
+
+void graph_impl::dump_graph(std::ostream &os) const
 {
     os << "version 1\n";
 
@@ -109,7 +132,7 @@ void graph_impl::dump(std::ostream &os) const
                 const size_t bus_idx = node.in_bus_idx(type, in_idx);
                 const size_t default_bus_idx = node.default_in_bus_idx(type, in_idx);
                 if (bus_idx == default_bus_idx) {
-                    os << _bus_i32.at(bus_idx);
+                    dump_node_in(os, node_idx, type, in_idx);
                     continue;
                 }
                 const bus_cell_spec &spec = _bus.at(type)._bus_spec.at(bus_idx);

@@ -113,14 +113,7 @@ struct graph_impl : graph
     template <data_type T> bus_underlying_type<T> &in_X(size_t idx, size_t node_input);
     template <data_type T> const bus_underlying_type<T> &out_X(size_t idx, size_t node_output) const;
 
-    explicit graph_impl()
-    {
-        constexpr size_t buffer_size = 10;
-
-        _bus_i32.resize(buffer_size);
-        _bus_fbuffer.resize(buffer_size);
-        _bus_str.resize(buffer_size);
-    }
+    explicit graph_impl();
     size_t add_node(node *n) override;
     void set_node(size_t node_idx, node *n) override;
     void run_node(size_t node_idx) override;
@@ -141,7 +134,8 @@ struct graph_impl : graph
     const std::vector<float> &fbuffer_out(size_t node_idx, size_t node_output) const override {
         return out_X<data_type::fbuffer>(node_idx, node_output); }
 
-    void dump(std::ostream &os) const override;
+    void dump_node_in(std::ostream &os, size_t node_idx, data_type, size_t input) const override;
+    void dump_graph(std::ostream &os) const override;
     void read_dump(std::istream &is, const nodes_factory &nodes) override;
 };
 
@@ -243,4 +237,13 @@ graph_impl::init_bus()
         { data_type::str, {}},
         { data_type::fbuffer, {}},
     };
+}
+
+inline graph_impl::graph_impl()
+{
+    constexpr size_t buffer_size = 10;
+
+    _bus_i32.resize(buffer_size);
+    _bus_fbuffer.resize(buffer_size);
+    _bus_str.resize(buffer_size);
 }
