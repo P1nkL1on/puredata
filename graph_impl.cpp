@@ -53,6 +53,21 @@ void graph_impl::node_inout_spec::run_foo(const size_t start, const size_t end, 
         foo(idx);
 }
 
+void graph_impl::node_inout_spec::warning(const std::string &msg)
+{
+
+}
+
+void graph_impl::node_inout_spec::error(const std::string &msg)
+{
+
+}
+
+void graph_impl::node_inout_spec::canvas_f(size_t w, size_t h, size_t size, const float *d)
+{
+
+}
+
 size_t graph_impl::add_node(node *n)
 {
     size_t node_idx = _nodes.size();

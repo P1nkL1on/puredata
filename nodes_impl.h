@@ -72,13 +72,16 @@ struct canvas_f : node
         const int w = ctx.i32_in(width);
         const int h = ctx.i32_in(height);
         if (w < 0 || h < 0)
-            throw - 1;
+            return ctx.error("W & H can't be negative");
         const int wh = static_cast<int>(in.size());
         if (w * h < wh)
             ctx.warning("buffer size can't cover W x H canvas");
         if (w * h > wh)
             ctx.warning("W x H canvas can't cover buffer size");
-        ctx.canvas_f(static_cast<size_t>(w), static_cast<size_t>(h), in.size(), in.data());
+        ctx.canvas_f(
+                    static_cast<size_t>(w),
+                    static_cast<size_t>(h),
+                    in.size(), in.data());
         ctx.fbuffer_out(buffer_out) = in;
     }
 };

@@ -43,7 +43,7 @@ struct graph_impl : graph
         void add_in_str(std::string &&value) override {
             return add_in_X<data_type::str>(std::move(value)); }
 
-        // not_run_ctx
+        // node_run_ctx
         foo_f parse_foo_f(const std::string &str, size_t &foo_input_count) override;
         void run_foo(const size_t start, const size_t end, const foo_iter &foo) override;
 
@@ -59,6 +59,10 @@ struct graph_impl : graph
 
         const std::string &str_in(size_t idx) const override {
             return in_X<data_type::str>(idx); }
+
+        void warning(const std::string &msg) override;
+        void error(const std::string &msg) override;
+        void canvas_f(size_t w, size_t h, size_t size, const float *d) override;
 
         // graph_impl
         size_t in_bus_idx(data_type type, size_t idx) const {
@@ -89,6 +93,7 @@ struct graph_impl : graph
         template <data_type T> void add_out_X();
         template <data_type T> const bus_underlying_type<T> &in_X(size_t idx) const;
         template <data_type T> bus_underlying_type<T> &out_X(size_t idx);
+
     };
 
     struct bus_cell_spec
