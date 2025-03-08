@@ -65,11 +65,12 @@ void test_graph_run_dump_read()
 
 void test_graph_run_buffer_map()
 {
-    return;
     graph_impl gi;
     graph &g = gi;
 
     size_t map_id = g.add_node(new map_f);
+    g.str_in(map_id, map_f::expr) =
+            "(a * 10 + 100) / 2 + a";
     g.fbuffer_in(map_id, map_f::buffer_in) =
             std::vector<float>{ 0.1f, 0.2f, 0.3f, 0.4f, 0.5f };
     g.run_node(map_id);
@@ -97,7 +98,6 @@ void test_parse_expr()
 
 void test_graph_buffer_canvas()
 {
-    return;
     graph_impl gi;
     graph &g = gi;
 
@@ -111,6 +111,29 @@ void test_graph_buffer_canvas()
             0, 0, 0, 0, 1, 0,
             0, 0, 0, 0, 1, 0, };
     g.run_node(canvas_id);
+}
+
+
+void test_copy_image()
+{
+    graph_impl gi;
+    graph &g = gi;
+
+    size_t read = g.add_node(new readimg_f);
+    size_t write = g.add_node(new writeimg_f);
+
+    g.str_in(read, readimg_f::filepath) =
+            "/home/user/Pictures/test.jpeg";
+    g.str_in(write, writeimg_f::filepath) =
+            "tmp.jpeg";
+
+    g.run_node(read);
+
+    g.connect_nodes(read, readimg_f::buffer, write, writeimg_f::buffer);
+    g.connect_nodes(read, readimg_f::width, write, writeimg_f::width);
+    g.connect_nodes(read, readimg_f::height, write, writeimg_f::height);
+    g.connect_nodes(read, readimg_f::channels, write, writeimg_f::channels);
+    g.run_node(write);
 }
 
 
@@ -134,6 +157,7 @@ int main()
     test_graph_run_buffer_map();
     test_parse_expr();
     test_graph_buffer_canvas();
+    test_copy_image();
     return 0;
 }
 

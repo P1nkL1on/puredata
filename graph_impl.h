@@ -62,6 +62,7 @@ struct node_spec : node_init_ctx, node_run_ctx
     const std::string &str_in(size_t idx) const override {
         return in_X<data_type::str>(idx); }
 
+    // FIXME: TODO: redo warning/error as outputs!
     void warning(const std::string &msg) override;
     void error(const std::string &msg) override;
     void canvas_f(size_t w, size_t h, size_t size, const float *d) override;
@@ -219,7 +220,7 @@ const bus_underlying_type<T> &node_spec::in_X(size_t idx) const
 template <data_type T>
 bus_underlying_type<T> &node_spec::out_X(size_t idx)
 {
-    EXPECT(in_bus_type(idx) == T);
+    EXPECT(out_bus_type(idx) == T);
     return _g->bus_X_ref<T>().at(out_bus_idx(idx));
 }
 

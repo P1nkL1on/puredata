@@ -85,6 +85,41 @@ struct canvas_f : node
 };
 
 
+struct readimg_f : node
+{
+    enum { filepath, };
+    enum { width, height, channels, buffer, };
+
+    void init(node_init_ctx &ctx) override
+    {
+        ctx.set_name("readimg-f");
+        ctx.add_in_str(filepath);
+        ctx.add_out_i32(width);
+        ctx.add_out_i32(height);
+        ctx.add_out_i32(channels);
+        ctx.add_out_fbuffer(buffer);
+    }
+    void run(node_run_ctx &ctx) override;
+};
+
+
+struct writeimg_f : node
+{
+    enum { filepath, width, height, channels, buffer, };
+
+    void init(node_init_ctx &ctx) override
+    {
+        ctx.set_name("readimg-f");
+        ctx.add_in_str(filepath);
+        ctx.add_in_i32(width);
+        ctx.add_in_i32(height);
+        ctx.add_in_i32(channels);
+        ctx.add_in_fbuffer(buffer);
+    }
+    void run(node_run_ctx &ctx) override;
+};
+
+
 struct nodes_factory_impl : nodes_factory
 {
     node *create(const std::string &name) const override
@@ -92,6 +127,7 @@ struct nodes_factory_impl : nodes_factory
         if (name == "summ-i32") return new summ_i32;
         if (name == "map-f") return new map_f;
         if (name == "canvas-f") return new canvas_f;
+        if (name == "readimg-f") return new readimg_f;
 
         return nullptr;
     }
