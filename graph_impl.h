@@ -136,30 +136,9 @@ private:
 
 struct graph_impl : graph
 {
-
-    struct bus_cell_spec
-    {
-        size_t node_idx;
-        size_t node_output_id;
-    };
-    struct bus
-    {
-        std::unordered_map<size_t, bus_cell_spec> _bus_spec;
-        size_t _bus_next_free_cell = 0;
-    };
-    static std::unordered_map<data_type, bus> init_bus();
-
-    std::vector<node_spec> _nodes;
-    std::vector<int> _bus_i32;
-    std::vector<std::vector<float>> _bus_fbuffer;
-    std::vector<std::string> _bus_str;
-    std::unordered_map<data_type, bus> _bus = init_bus();
-    template <data_type T> bus_underlying_vector_type<T> &bus_X_ref();
-    template <data_type T> const bus_underlying_vector_type<T> &bus_X_cref() const;
-    template <data_type T> bus_underlying_type<T> &in_X(size_t idx, size_t node_input);
-    template <data_type T> const bus_underlying_type<T> &out_X(size_t idx, size_t node_output) const;
-
     explicit graph_impl();
+
+    // for graph
     size_t add_node(node *n) override;
     void set_node(size_t node_idx, node *n) override;
     void run_node(size_t node_idx) override;
@@ -186,6 +165,33 @@ struct graph_impl : graph
     void dump_node_in_value(std::ostream &os, size_t node_idx, size_t input) const override;
     void dump_graph(std::ostream &os, const bool compact = true) const override;
     void read_dump(std::istream &is, const nodes_factory &nodes) override;
+
+    // for node_spec
+    template <data_type T> bus_underlying_vector_type<T> &bus_X_ref();
+    template <data_type T> const bus_underlying_vector_type<T> &bus_X_cref() const;
+    size_t next_free_bus_slot(data_type);
+    void set_bus_slot_spec(data_type, size_t slot_idx, size_t node_idx, size_t output_id);
+    void free_bus_slot(data_type, size_t slot_idx);
+private:
+    struct bus_slot_spec
+    {
+        size_t node_idx;
+        size_t node_output_id;
+        bool _freed = false;
+    };
+    struct bus
+    {
+        std::map<size_t, bus_slot_spec> _bus_spec;
+        size_t _bus_next_free_slot = 0;
+    };
+    static std::unordered_map<data_type, bus> init_bus();
+    std::vector<node_spec> _nodes;
+    std::vector<int> _bus_i32;
+    std::vector<std::vector<float>> _bus_fbuffer;
+    std::vector<std::string> _bus_str;
+    std::unordered_map<data_type, bus> _bus = init_bus();
+    template <data_type T> bus_underlying_type<T> &in_X(size_t idx, size_t node_input);
+    template <data_type T> const bus_underlying_type<T> &out_X(size_t idx, size_t node_output) const;
 };
 
 
@@ -202,24 +208,18 @@ struct graph_impl : graph
 template <data_type T, typename X>
 void node_spec::add_in_X(size_t id, X &&x, const std::string &title, bool stable)
 {
-    size_t &cell_idx = _g->_bus[T]._bus_next_free_cell;
-    _in_specs.emplace(id, in_spec {
-        cell_idx, cell_idx, T, title, stable
-    });
-    _g->bus_X_ref<T>()[cell_idx] = std::move(x);
-    ++cell_idx;
+    const size_t slot_idx = _g->next_free_bus_slot(T);
+    _in_specs.emplace(id, in_spec { slot_idx, slot_idx, T, title, stable });
+    _g->bus_X_ref<T>()[slot_idx] = std::move(x);
 }
 
 
 template <data_type T>
 void node_spec::add_out_X(size_t id, const std::string &title, bool stable)
 {
-    size_t &cell_idx = _g->_bus[T]._bus_next_free_cell;
-    _out_specs.emplace(id, out_spec {
-        cell_idx, T, title, stable
-    });
-    _g->_bus[T]._bus_spec.emplace(cell_idx, graph_impl::bus_cell_spec{ _node_idx, id });
-    ++cell_idx;
+    const size_t slot_idx = _g->next_free_bus_slot(T);
+    _out_specs.emplace(id, out_spec { slot_idx, T, title, stable });
+    _g->set_bus_slot_spec(T, slot_idx, _node_idx, id);
 }
 
 
@@ -288,7 +288,7 @@ graph_impl::init_bus()
 
 inline graph_impl::graph_impl()
 {
-    constexpr size_t buffer_size = 1024; // FIXME: wno't be much until reusing appears
+    constexpr size_t buffer_size = 1024;
 
     _bus_i32.resize(buffer_size);
     _bus_fbuffer.resize(buffer_size);

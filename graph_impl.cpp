@@ -49,11 +49,9 @@ void node_spec::remove_unstable_outs()
 {
     for (auto it = _out_specs.begin(); it != _out_specs.end(); ) {
         if (it->second._stable) { ++it; continue; }
+        const out_spec &spec = it->second;
+        _g->free_bus_slot(spec._type, spec._out_bus_idx);
         it = _out_specs.erase(it);
-        // FIXME: for now it's not a great deal, but this will
-        // fastly traverse global graph bus size if it won't be
-        // any reusing. probably mark a bus slots as unused
-        // then reuse it w/ cell_idx
     }
 }
 
@@ -206,7 +204,7 @@ void graph_impl::dump_graph(std::ostream &os, const bool compact) const
             if (has_own_value) {
                 dump_node_in_value(line, node_idx, id);
             } else {
-                const bus_cell_spec &connection =
+                const bus_slot_spec &connection =
                         _bus.at(spec.in_bus_type(id))._bus_spec.at(spec.in_bus_idx(id));
                 line << "out " << connection.node_idx << ' ' << connection.node_output_id;
             }
@@ -376,4 +374,26 @@ void graph_impl::read_dump(std::istream &is, const nodes_factory &nodes)
     for (const auto &[pidx, poidx, ridx, riidx] : connections)
         g.connect_nodes(pidx, poidx, ridx, riidx);
     *this = std::move(g);
+}
+
+size_t graph_impl::next_free_bus_slot(data_type type)
+{
+    bus &b = _bus.at(type);
+    for (auto it = b._bus_spec.begin(); it != b._bus_spec.end(); ++it)
+        if (it->second._freed) return it->first;
+    return b._bus_next_free_slot++;
+}
+
+void graph_impl::set_bus_slot_spec(
+        data_type type, size_t slot_idx, size_t node_idx, size_t output_id)
+{
+    bus &b = _bus.at(type);
+    b._bus_spec.insert_or_assign(
+                slot_idx, bus_slot_spec{ node_idx, output_id, false });
+}
+
+void graph_impl::free_bus_slot(data_type type, size_t slot_idx)
+{
+    bus &b = _bus.at(type);
+    b._bus_spec.at(slot_idx)._freed = true;
 }

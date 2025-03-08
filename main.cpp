@@ -123,7 +123,7 @@ void test_copy_image_channels()
     size_t write = g.add_node(new writeimg_f);
 
     g.str_in(read, readimg_f::filepath) =
-            "/home/user/Pictures/test.jpeg";
+            "/home/pl/Pictures/ero2/nashidrop-Anime-Art-artist-Tingyun-(Honkai-Star-Rail)-8768681.jpeg";
     g.str_in(write, writeimg_f::filepath) =
             "tmp.jpeg";
 
@@ -135,12 +135,18 @@ void test_copy_image_channels()
     g.connect_nodes(read, readimg_f::channels, write, writeimg_f::channels);
     g.run_node(write);
 
-    size_t split = g.add_node(new splitbuffer_f);
+//    size_t map = g.add_node(new map_f);
+//    g.connect_nodes(read, readimg_f::buffer, map, map_f::buffer_in);
+//    g.str_in(map, map_f::expr) = "(a * 0.1) + 0.9";
+//    g.run_node(map);
 
+    size_t split = g.add_node(new splitbuffer_f);
     g.connect_nodes(read, readimg_f::channels, split, splitbuffer_f::channels);
+    g.update_node(split);
     g.update_node(split);
 
     g.connect_nodes(read, readimg_f::buffer, split, splitbuffer_f::buffer_in);
+//    g.connect_nodes(map, readimg_f::buffer, split, splitbuffer_f::buffer_in);
     g.run_node(split);
 
     for (int i = 0; i < g.i32_out(read, readimg_f::channels); ++i) {
