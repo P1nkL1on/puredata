@@ -5,15 +5,15 @@
 
 struct summ_i32 : node
 {
-    enum in_i32 { a, b, };
-    enum out_i32 { summ, };
+    enum { a, b, };
+    enum { summ, };
 
     void init(node_init_ctx &ctx) override
     {
         ctx.set_name("summ-i32");
-        ctx.add_in_i32();
-        ctx.add_in_i32();
-        ctx.add_out_i32();
+        ctx.add_in_i32(a, 0, "a");
+        ctx.add_in_i32(b, 0, "b");
+        ctx.add_out_i32(summ, "a+b");
     }
     void run(node_run_ctx &ctx) override
     {
@@ -24,16 +24,15 @@ struct summ_i32 : node
 
 struct map_f : node
 {
-    enum in_str { expr, };
-    enum in_fbuffer { buffer_in, };
-    enum out_fbuffer { buffer_out, };
+    enum { expr, buffer_in, };
+    enum { buffer_out, };
 
     void init(node_init_ctx &ctx) override
     {
         ctx.set_name("map-f");
-        ctx.add_in_str("a * 1 + 0");
-        ctx.add_in_fbuffer();
-        ctx.add_out_fbuffer();
+        ctx.add_in_str(expr, "a * 1 + 0");
+        ctx.add_in_fbuffer(buffer_in);
+        ctx.add_out_fbuffer(buffer_out);
     }
     void run(node_run_ctx &ctx) override
     {
@@ -54,17 +53,16 @@ struct map_f : node
 
 struct canvas_f : node
 {
-    enum in_i32 { width, height, };
-    enum in_fbuffer { buffer_in, };
-    enum out_fbuffer { buffer_out, };
+    enum { width, height, buffer_in, };
+    enum { buffer_out, };
 
     void init(node_init_ctx &ctx) override
     {
         ctx.set_name("canvas-f");
-        ctx.add_in_i32(128);
-        ctx.add_in_i32(128);
-        ctx.add_in_fbuffer();
-        ctx.add_out_fbuffer();
+        ctx.add_in_i32(width, 128);
+        ctx.add_in_i32(height, 128);
+        ctx.add_in_fbuffer(buffer_in);
+        ctx.add_out_fbuffer(buffer_out);
     }
     void run(node_run_ctx &ctx) override
     {
