@@ -114,7 +114,7 @@ void test_graph_buffer_canvas()
 }
 
 
-void test_copy_image()
+void test_copy_image_channels()
 {
     graph_impl gi;
     graph &g = gi;
@@ -134,6 +134,24 @@ void test_copy_image()
     g.connect_nodes(read, readimg_f::height, write, writeimg_f::height);
     g.connect_nodes(read, readimg_f::channels, write, writeimg_f::channels);
     g.run_node(write);
+
+    size_t split = g.add_node(new splitbuffer_f);
+
+    g.connect_nodes(read, readimg_f::channels, split, splitbuffer_f::channels);
+    g.update_node(split);
+
+    g.connect_nodes(read, readimg_f::buffer, split, splitbuffer_f::buffer_in);
+    g.run_node(split);
+
+    for (int i = 0; i < g.i32_out(read, readimg_f::channels); ++i) {
+        size_t write = g.add_node(new writeimg_f);
+        g.str_in(write, writeimg_f::filepath) = "tmp." + std::to_string(i) + ".jpeg";
+        g.connect_nodes(split, splitbuffer_f::buffer_out_first + i, write, writeimg_f::buffer);
+        g.connect_nodes(read, readimg_f::width, write, writeimg_f::width);
+        g.connect_nodes(read, readimg_f::height, write, writeimg_f::height);
+        g.i32_in(write, writeimg_f::channels) = 1;
+        g.run_node(write);
+    }
 }
 
 
@@ -157,7 +175,7 @@ int main()
     test_graph_run_buffer_map();
     test_parse_expr();
     test_graph_buffer_canvas();
-    test_copy_image();
+    test_copy_image_channels();
     return 0;
 }
 

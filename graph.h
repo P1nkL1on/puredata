@@ -11,6 +11,7 @@ struct graph
     virtual size_t add_node(node *node) = 0;
     virtual void set_node(size_t node_idx, node *node) = 0;
     virtual void run_node(size_t node_idx) = 0;
+    virtual void update_node(size_t node_idx) = 0;
     virtual int &i32_in(size_t node_idx, size_t node_input) = 0;
     virtual const int &i32_out(size_t node_idx, size_t node_output) const = 0;
     virtual std::vector<float> &fbuffer_in(size_t node_idx, size_t node_input) = 0;

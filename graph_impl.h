@@ -11,7 +11,7 @@
 template <data_type T> struct bus_type { using _type = void; };
 template<> struct bus_type<data_type::i32> { using _type = int; };
 template<> struct bus_type<data_type::str> { using _type = std::string; };
-template<> struct bus_type<data_type::fbuffer> { using _type = std::vector<float>; };
+template<> struct bus_type<data_type::buffer_f> { using _type = std::vector<float>; };
 template <data_type T> using bus_underlying_type = typename bus_type<T>::_type;
 template <data_type T> using bus_underlying_vector_type = std::vector<bus_underlying_type<T>>;
 
@@ -19,13 +19,14 @@ template <data_type T> using bus_underlying_vector_type = std::vector<bus_underl
 struct graph_impl;
 
 
-struct node_spec : node_init_ctx, node_run_ctx
+struct node_spec : node_init_ctx, node_run_ctx, node_update_ctx
 {
     node_spec() = default;
     node_spec(graph_impl &g, node *node, size_t node_idx);
     node_spec(node_spec &&other);
     node_spec &operator=(node_spec &&other);
     void run();
+    void update();
     bool was_removed() const { return _node == nullptr; }
 
     // node_init_ctx
@@ -38,16 +39,24 @@ struct node_spec : node_init_ctx, node_run_ctx
         return add_out_X<data_type::i32>(id, title); }
 
     void add_in_fbuffer(size_t id, std::vector<float> &&value = {}, const std::string &title = "") override {
-        return add_in_X<data_type::fbuffer>(id, std::move(value), title); }
+        return add_in_X<data_type::buffer_f>(id, std::move(value), title); }
     void add_out_fbuffer(size_t id, const std::string &title = "") override {
-        return add_out_X<data_type::fbuffer>(id, title); }
+        return add_out_X<data_type::buffer_f>(id, title); }
 
     void add_in_str(size_t id, std::string &&value = "", const std::string &title = "") override {
         return add_in_X<data_type::str>(id, std::move(value), title); }
 
+    // node_update_ctx
+    enum { unstable, stable };
+    void remove_unstable_outs() override;
+    void add_unstable_out_fbuffer(size_t id, const std::string &title) override {
+        return add_out_X<data_type::buffer_f>(id, title, unstable); }
+    // TODO: make interface split and virtual inheretance to remove methods duplication
+    const int &stable_in_i32(size_t id) const override { return i32_in(id); }
+
     // node_run_ctx
     foo_f parse_foo_f(const std::string &str, size_t &foo_input_count) override;
-    void run_foo(const size_t start, const size_t end, const foo_iter &foo) override;
+    void run_foo(const size_t start, const size_t length, const foo_iter &foo) override;
 
     const int &i32_in(size_t idx) const override {
         return in_X<data_type::i32>(idx); }
@@ -55,9 +64,9 @@ struct node_spec : node_init_ctx, node_run_ctx
         return out_X<data_type::i32>(idx); }
 
     const std::vector<float> &fbuffer_in(size_t idx) const override {
-        return in_X<data_type::fbuffer>(idx); }
+        return in_X<data_type::buffer_f>(idx); }
     std::vector<float> &fbuffer_out(size_t idx) override {
-        return out_X<data_type::fbuffer>(idx); }
+        return out_X<data_type::buffer_f>(idx); }
 
     const std::string &str_in(size_t idx) const override {
         return in_X<data_type::str>(idx); }
@@ -80,6 +89,8 @@ struct node_spec : node_init_ctx, node_run_ctx
         return _in_specs.at(id)._default_in_bus_idx; }
     size_t ins_count() const {
         return _in_specs.size(); }
+    size_t outs_count() const {
+        return _out_specs.size(); }
     void set_in_bus_idx(size_t id, size_t bus_idx) {
         _in_specs.at(id)._in_bus_idx = bus_idx; }
     const std::string &in_title_cref(size_t id) const {
@@ -98,12 +109,14 @@ private:
         size_t _default_in_bus_idx = -1ul;
         data_type _type = data_type::_first;
         std::string _title;
+        bool _stable = true;
     };
     struct out_spec
     {
         size_t _out_bus_idx = -1ul;
         data_type _type = data_type::_first;
         std::string _title;
+        bool _stable = true;
     };
 
     graph_impl *_g = nullptr;
@@ -114,8 +127,8 @@ private:
     std::map<size_t, in_spec> _in_specs;
     std::map<size_t, out_spec> _out_specs;
 
-    template <data_type T, typename X> void add_in_X(size_t id, X &&x, const std::string &title);
-    template <data_type T> void add_out_X(size_t id, const std::string &title);
+    template <data_type T, typename X> void add_in_X(size_t id, X &&x, const std::string &title, bool stable = true);
+    template <data_type T> void add_out_X(size_t id, const std::string &title, bool stable = true);
     template <data_type T> const bus_underlying_type<T> &in_X(size_t idx) const;
     template <data_type T> bus_underlying_type<T> &out_X(size_t idx);
 };
@@ -150,6 +163,7 @@ struct graph_impl : graph
     size_t add_node(node *n) override;
     void set_node(size_t node_idx, node *n) override;
     void run_node(size_t node_idx) override;
+    void update_node(size_t node_idx) override;
     void connect_nodes(
             size_t node_provider_idx,
             size_t node_provider_output,
@@ -162,9 +176,9 @@ struct graph_impl : graph
         return out_X<data_type::i32>(node_idx, node_output); }
 
     std::vector<float> &fbuffer_in(size_t node_idx, size_t node_input) override {
-        return in_X<data_type::fbuffer>(node_idx, node_input); }
+        return in_X<data_type::buffer_f>(node_idx, node_input); }
     const std::vector<float> &fbuffer_out(size_t node_idx, size_t node_output) const override {
-        return out_X<data_type::fbuffer>(node_idx, node_output); }
+        return out_X<data_type::buffer_f>(node_idx, node_output); }
 
     std::string &str_in(size_t node_idx, size_t node_input) override {
         return in_X<data_type::str>(node_idx, node_input); }
@@ -186,11 +200,11 @@ struct graph_impl : graph
 
 
 template <data_type T, typename X>
-void node_spec::add_in_X(size_t id, X &&x, const std::string &title)
+void node_spec::add_in_X(size_t id, X &&x, const std::string &title, bool stable)
 {
     size_t &cell_idx = _g->_bus[T]._bus_next_free_cell;
     _in_specs.emplace(id, in_spec {
-        cell_idx, cell_idx, T, title
+        cell_idx, cell_idx, T, title, stable
     });
     _g->bus_X_ref<T>()[cell_idx] = std::move(x);
     ++cell_idx;
@@ -198,11 +212,11 @@ void node_spec::add_in_X(size_t id, X &&x, const std::string &title)
 
 
 template <data_type T>
-void node_spec::add_out_X(size_t id, const std::string &title)
+void node_spec::add_out_X(size_t id, const std::string &title, bool stable)
 {
     size_t &cell_idx = _g->_bus[T]._bus_next_free_cell;
     _out_specs.emplace(id, out_spec {
-        cell_idx, T, title
+        cell_idx, T, title, stable
     });
     _g->_bus[T]._bus_spec.emplace(cell_idx, graph_impl::bus_cell_spec{ _node_idx, id });
     ++cell_idx;
@@ -248,7 +262,7 @@ template <data_type T> bus_underlying_vector_type<T> &graph_impl::bus_X_ref()
 {
     if constexpr (T == data_type::i32) { return _bus_i32;
     } else if constexpr (T == data_type::str) { return _bus_str;
-    } else if constexpr (T == data_type::fbuffer) { return _bus_fbuffer;
+    } else if constexpr (T == data_type::buffer_f) { return _bus_fbuffer;
     }
 }
 
@@ -257,7 +271,7 @@ template <data_type T> const bus_underlying_vector_type<T> &graph_impl::bus_X_cr
 {
     if constexpr (T == data_type::i32) { return _bus_i32;
     } else if constexpr (T == data_type::str) { return _bus_str;
-    } else if constexpr (T == data_type::fbuffer) { return _bus_fbuffer;
+    } else if constexpr (T == data_type::buffer_f) { return _bus_fbuffer;
     }
 }
 
@@ -268,13 +282,13 @@ graph_impl::init_bus()
     return {
         { data_type::i32, {}},
         { data_type::str, {}},
-        { data_type::fbuffer, {}},
+        { data_type::buffer_f, {}},
     };
 }
 
 inline graph_impl::graph_impl()
 {
-    constexpr size_t buffer_size = 10;
+    constexpr size_t buffer_size = 1024; // FIXME: wno't be much until reusing appears
 
     _bus_i32.resize(buffer_size);
     _bus_fbuffer.resize(buffer_size);

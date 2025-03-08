@@ -34,10 +34,27 @@ void node_spec::run()
     _node->run(*this);
 }
 
+void node_spec::update()
+{
+    _node->update(*this);
+}
+
 void node_spec::set_name(const std::string &name)
 {
     EXPECT(!name.empty());
     _name = name;
+}
+
+void node_spec::remove_unstable_outs()
+{
+    for (auto it = _out_specs.begin(); it != _out_specs.end(); ) {
+        if (it->second._stable) { ++it; continue; }
+        it = _out_specs.erase(it);
+        // FIXME: for now it's not a great deal, but this will
+        // fastly traverse global graph bus size if it won't be
+        // any reusing. probably mark a bus slots as unused
+        // then reuse it w/ cell_idx
+    }
 }
 
 foo_f node_spec::parse_foo_f(const std::string &expr_string, size_t &foo_input_count)
@@ -49,11 +66,11 @@ foo_f node_spec::parse_foo_f(const std::string &expr_string, size_t &foo_input_c
     });
 }
 
-void node_spec::run_foo(const size_t start, const size_t end, const foo_iter &foo)
+void node_spec::run_foo(const size_t start, const size_t length, const foo_iter &foo)
 {
-    // TODO: add parallel stuff
-    for (size_t idx = start; idx != end; ++idx)
-        foo(idx);
+    const size_t chunk = 1024 * 1024;
+    for (size_t i = 0; i < length; i += chunk)
+        foo(start + i, std::min(length - i, chunk));
 }
 
 void node_spec::warning(const std::string &msg)
@@ -90,6 +107,11 @@ void graph_impl::run_node(size_t node_idx)
     _nodes[node_idx].run();
 }
 
+void graph_impl::update_node(size_t node_idx)
+{
+    _nodes[node_idx].update();
+}
+
 void graph_impl::connect_nodes(
         size_t node_provider_idx,
         size_t node_provider_output,
@@ -112,7 +134,7 @@ void graph_impl::dump_node_in_value(
         case data_type::i32:
             os << _bus_i32.at(bus_offset);
             return;
-        case data_type::fbuffer: {
+        case data_type::buffer_f: {
             const std::vector<float> &buffer = _bus_fbuffer.at(bus_offset);
             os << buffer.size();
             for (const float &v : buffer) os << ' ' << v;
@@ -327,7 +349,7 @@ void graph_impl::read_dump(std::istream &is, const nodes_factory &nodes)
                         expect_i32(g.i32_in(node_idx, id), "arg i32 value");
                         break;
                     }
-                    case data_type::fbuffer: {
+                    case data_type::buffer_f: {
                         size_t size; expect_ui64(size, "arg fbuffer size (i32)");
                         g.fbuffer_in(node_idx, id).resize(size);
                         for (size_t i = 0; i < size; ++i) {
