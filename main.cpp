@@ -1,8 +1,10 @@
 #include <sstream>
+#include <chrono>
 
 #include "exceptions.h"
 #include "nodes_impl.h"
 #include "graph_impl.h"
+#include "view_impl.h"
 #include "expr.h"
 
 
@@ -123,7 +125,7 @@ void test_copy_image_channels()
     size_t write = g.add_node(new writeimg_f);
 
     g.str_in(read, readimg_f::filepath) =
-            "/home/pl/Pictures/ero2/nashidrop-Anime-Art-artist-Tingyun-(Honkai-Star-Rail)-8768681.jpeg";
+            "/home/pl/Pictures/rofls/психическое_здоровье.jpg";
     g.str_in(write, writeimg_f::filepath) =
             "tmp.jpeg";
 
@@ -161,27 +163,54 @@ void test_copy_image_channels()
 }
 
 
-// #include <raylib.h>
+#include <raylib.h>
+
+void test_start_view()
+{
+    graph_impl gi;
+    graph &g = gi;
+
+    size_t summ_id = g.add_node(new summ_i32);
+
+    g.i32_in(summ_id, summ_i32::a) = 42;
+    g.i32_in(summ_id, summ_i32::b) = 69;
+    g.move_node(summ_id, 250, 200);
+
+    graph_view_raylib vi;
+    graph_view &v = vi;
+    v.update(g);
+
+    const int w = 600;
+    const int h = 400;
+    InitWindow(w, h, "puredata graph view");
+    SetTargetFPS(60);
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+        ClearBackground(WHITE);
+        v.draw(0, 0, w, h);
+        // DrawText("Hello, World!", screenWidth / 2 - MeasureText("Hello, World!", 20) / 2, screenHeight / 2 - 10, 20, BLACK);
+        EndDrawing();
+    }
+    CloseWindow();
+}
+
+
 
 int main()
 {
-    // const int screenWidth = 600;
-    // const int screenHeight = 400;
-    // InitWindow(screenWidth, screenHeight, "Hello World Window");
-    // SetTargetFPS(60);
-    // while (!WindowShouldClose()) {
-    //     BeginDrawing();
-    //     ClearBackground(RED);
-    //     DrawText("Hello, World!", screenWidth / 2 - MeasureText("Hello, World!", 20) / 2, screenHeight / 2 - 10, 20, BLACK);
-    //     EndDrawing();
-    // }
-    // CloseWindow();
 
     test_graph_run_dump_read();
     test_graph_run_buffer_map();
     test_parse_expr();
     test_graph_buffer_canvas();
+
+    auto start = std::chrono::high_resolution_clock::now();
     test_copy_image_channels();
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed = end - start;
+    std::cout << "took " << elapsed.count() << " ms\n";
+
+    test_start_view();
     return 0;
 }
 

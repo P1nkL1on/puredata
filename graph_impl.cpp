@@ -66,7 +66,7 @@ foo_f node_spec::parse_foo_f(const std::string &expr_string, size_t &foo_input_c
 
 void node_spec::run_foo(const size_t start, const size_t length, const foo_iter &foo)
 {
-    const size_t chunk = 1024 * 1024;
+    const size_t chunk = 4096;
     for (size_t i = 0; i < length; i += chunk)
         foo(start + i, std::min(length - i, chunk));
 }
@@ -108,6 +108,26 @@ void graph_impl::run_node(size_t node_idx)
 void graph_impl::update_node(size_t node_idx)
 {
     _nodes[node_idx].update();
+}
+
+void graph_impl::move_node(size_t node_idx, int x, int y)
+{
+    _nodes[node_idx]._x = x;
+    _nodes[node_idx]._y = y;
+}
+
+std::pair<int, int> graph_impl::node_xy(size_t node_idx) const
+{
+    const node_spec &node = _nodes[node_idx];
+    return { node._x, node._y };
+}
+
+std::vector<size_t> graph_impl::node_idxs() const
+{
+    std::vector<size_t> idxs; idxs.reserve(_nodes.size());
+    for (size_t i = 0; i < _nodes.size(); ++i)
+        if (!_nodes.at(i).was_removed()) idxs.push_back(i);
+    return idxs;
 }
 
 void graph_impl::connect_nodes(

@@ -24,5 +24,8 @@ struct graph
             size_t node_reciever_input) = 0;
     virtual void dump_node_in_value(std::ostream &os, size_t node_idx, size_t input) const = 0;
     virtual void dump_graph(std::ostream &os, const bool compact = true) const = 0;
-    virtual void read_dump(std::istream &is, const nodes_factory &nodes) = 0;
+    virtual void read_dump(std::istream &is, const nodes_factory &node_idxs) = 0;
+    virtual void move_node(size_t node_idx, int x, int y) = 0;
+    virtual std::pair<int, int> node_xy(size_t node_idx) const = 0;
+    virtual std::vector<size_t> node_idxs() const = 0;
 };    

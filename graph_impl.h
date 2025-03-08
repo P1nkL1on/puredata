@@ -143,6 +143,9 @@ struct graph_impl : graph
     void set_node(size_t node_idx, node *n) override;
     void run_node(size_t node_idx) override;
     void update_node(size_t node_idx) override;
+    void move_node(size_t node_idx, int x, int y) override;
+    std::pair<int, int> node_xy(size_t node_idx) const override;
+    std::vector<size_t> node_idxs() const override;
     void connect_nodes(
             size_t node_provider_idx,
             size_t node_provider_output,
@@ -164,7 +167,7 @@ struct graph_impl : graph
 
     void dump_node_in_value(std::ostream &os, size_t node_idx, size_t input) const override;
     void dump_graph(std::ostream &os, const bool compact = true) const override;
-    void read_dump(std::istream &is, const nodes_factory &nodes) override;
+    void read_dump(std::istream &is, const nodes_factory &node_idxs) override;
 
     // for node_spec
     template <data_type T> bus_underlying_vector_type<T> &bus_X_ref();
