@@ -1,3 +1,9 @@
+# Roadmap
+
+- [ ] Add a dirty state, and node caching
+- [ ] User graphics Api 
+
+# TL;DR
 computational (in future image processing) graph inspired by https://github.com/pure-data/pure-data
 
 here is a code in graph nodes to read an image and write it's channels separately:
